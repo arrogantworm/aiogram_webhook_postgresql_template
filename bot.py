@@ -1,10 +1,12 @@
 import asyncio
+import asyncpg
 import logging
 from aiogram import Bot, Dispatcher
 from aiogram.webhook.aiohttp_server import SimpleRequestHandler, setup_application
 from aiohttp import web
 from core.settings import config
 from core.utils import commands
+from core.middlewares import dbmiddleware
 from core.handlers import basic
 
 
@@ -22,9 +24,22 @@ async def start():
                         format='%(asctime)s - [%(levelname)s] - %(name)s - '
                                '(%(filename)s).%(funcName)s(%(lineno)d) - %(message)s')
     bot = Bot(config.BOT_TOKEN.get_secret_value())
+
+    # PostgreSQL connection
+    pool_connect = await asyncpg.create_pool(user=config.DB_USER.get_secret_value(),
+                                             password=config.DB_PASSWORD.get_secret_value(),
+                                             database=config.DB_NAME.get_secret_value(),
+                                             host=config.DB_HOST,
+                                             port=config.DB_PORT,
+                                             command_timeout=60)
+
+    # Dispatcher
     dp = Dispatcher()
     dp.startup.register(on_startup)
     dp.shutdown.register(on_shutdown)
+
+    # Middlewares
+    dp.update.middleware.register(dbmiddleware.DbSession(pool_connect))
 
     # Routers
     dp.include_router(basic.router)

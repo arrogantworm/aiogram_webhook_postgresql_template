@@ -3,13 +3,15 @@ from aiogram.filters import Command
 from aiogram.types import Message, ReplyKeyboardRemove
 from aiogram.fsm.context import FSMContext
 from aiogram.filters.text import Text
+from core.utils import dbconnect
 
 
 router = Router()
 
 
 @router.message(Command(commands=["start"]))
-async def start_handler(message: Message, state: FSMContext):
+async def start_handler(message: Message, state: FSMContext, request: dbconnect.Request):
+    await request.new_user(message.from_user.id, message.from_user.username)
     await state.clear()
     await message.answer('Привет', reply_markup=ReplyKeyboardRemove())
 
